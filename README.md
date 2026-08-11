@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Equestrian Competition GO
 
 En lille web-app til at planlægge forberedelse og transport baglæns fra stævnestart —
@@ -55,3 +56,6 @@ equestrian-competition-go/
 - Flere config-parametre pr. fase (fx "kræver hjælper", checkliste-punkter)
 - Eksport/import af planer som JSON, så de kan deles mellem enheder
 - Flere brugere / cloud-lagring (kræver en rigtig backend, fx Supabase eller Firebase)
+=======
+# equestrian-competition-go
+>>>>>>> 68f95c71fff3b048c23907db22ca6666439bec31
