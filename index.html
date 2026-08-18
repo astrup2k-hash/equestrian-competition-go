@@ -210,6 +210,14 @@
     <p style="margin-top:1.6rem; font-size:.72rem; color:#7d9280;">Kræver at appen er sat op med Supabase + Google-login. Se README for opsætning.</p>
   </div>
 
+  <div class="gate hidden" id="errorGate">
+    <h2 style="color:#f0a08e;">Der opstod en fejl</h2>
+    <p>Appen kunne ikke starte korrekt. Detaljerne herunder viser hvad der gik galt:</p>
+    <pre id="errorDetails" style="text-align:left; white-space:pre-wrap; background:rgba(0,0,0,0.3); border:1px solid var(--rust); border-radius:.5rem; padding:.8rem; font-size:.75rem; color:#f0c9c0; max-height:220px; overflow:auto;"></pre>
+    <button class="btn" id="retryBtn" style="margin-top:1rem;">Prøv igen</button>
+    <button class="btn ghost" id="logoutFromErrorBtn" style="margin-top:.6rem;">Log ud og start forfra</button>
+  </div>
+
   <div class="gate hidden" id="stableGate">
     <h2>Vælg eller opret din stald</h2>
     <p>En "stald" er den gruppe du deler stævneplaner med. Opret en ny, eller tilslut dig en med en invitationskode fra en holdkammerat.</p>
@@ -320,8 +328,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // Udfyld disse to værdier efter du har oprettet dit Supabase-projekt.
 // Find dem under Project Settings → API i Supabase Dashboard.
 const CONFIG = {
-  supabaseUrl: "https://tstdlinasjpyiensxilf.supabase.co",       // fx "https://xxxxxxxx.supabase.co"
-  supabaseAnonKey: "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"
+  supabaseUrl: "YOUR_SUPABASE_URL",       // fx "https://xxxxxxxx.supabase.co"
+  supabaseAnonKey: "YOUR_SUPABASE_ANON_KEY"
 };
 // ====================================
 
