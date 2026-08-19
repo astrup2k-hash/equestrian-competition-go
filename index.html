@@ -165,12 +165,6 @@
   .gate .divider::before, .gate .divider::after{ content:""; flex:1; height:1px; background:var(--line); }
   .gate .field{ text-align:left; margin-bottom:.9rem; }
   .gate .field input{ width:100%; }
-  .google-btn{
-    display:inline-flex; align-items:center; gap:.6rem; justify-content:center;
-    width:100%; padding:.7rem 1rem; border-radius:.5rem; border:1px solid var(--brass);
-    background:var(--parchment); color:var(--ink); font-weight:600; font-size:.88rem;
-  }
-  .google-btn:hover{ background:#fff; }
   .stable-card{
     display:flex; align-items:center; justify-content:space-between; gap:.6rem;
     background:rgba(0,0,0,0.15); border:1px solid var(--line); border-radius:.5rem;
@@ -201,13 +195,26 @@
       <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M5 19c1-4 1-7 3.5-9.5S13 6 13 4c0 0 3 .5 3 3.5 0 2-1.5 2.5-1.5 4.5 0 3 3 3.5 3 7" stroke="#1a1108" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     </div>
     <h2>Equestrian Competition <span class="go" style="color:var(--brass)">GO</span></h2>
-    <p>Log ind for at se og redigere din stalds stævneplaner sammen med resten af holdet.</p>
-    <button class="google-btn" id="googleLoginBtn">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 01-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 009 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 013.68 9c0-.59.1-1.17.27-1.7V4.97H.96A9 9 0 000 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 00.96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
-      Log ind med Google
-    </button>
+    <p id="authIntro">Log ind for at se og redigere din stalds stævneplaner sammen med resten af holdet.</p>
+
+    <div class="field">
+      <label for="authEmail" style="font-size:.72rem; color:#a9bcac;">E-mail</label>
+      <input type="text" id="authEmail" placeholder="dig@eksempel.dk" autocomplete="email">
+    </div>
+    <div class="field">
+      <label for="authPassword" style="font-size:.72rem; color:#a9bcac;">Adgangskode</label>
+      <input type="password" id="authPassword" placeholder="Mindst 6 tegn" autocomplete="current-password">
+    </div>
+
+    <button class="btn primary" id="authSubmitBtn" style="width:100%;">Log ind</button>
+
     <div class="msg" id="loginMsg"></div>
-    <p style="margin-top:1.6rem; font-size:.72rem; color:#7d9280;">Kræver at appen er sat op med Supabase + Google-login. Se README for opsætning.</p>
+
+    <p style="margin-top:1.1rem; font-size:.82rem;">
+      <span id="authToggleText">Ny bruger?</span>
+      <a href="#" id="authToggleLink" style="color:var(--brass); font-weight:600; text-decoration:none;">Opret en konto</a>
+    </p>
+    <p style="margin-top:1.6rem; font-size:.72rem; color:#7d9280;">Kræver at appen er sat op med Supabase. Se README for opsætning.</p>
   </div>
 
   <div class="gate hidden" id="errorGate">
@@ -329,7 +336,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // Find dem under Project Settings → API i Supabase Dashboard.
 const CONFIG = {
   supabaseUrl: "https://tstdlinasjpyiensxilf.supabase.co",       // fx "https://xxxxxxxx.supabase.co"
-  supabaseAnonKey: "sb_secret_dKQq8qQ9izFah4L8XKc1CA_RZ0WyTL3"
+  supabaseAnonKey: "sb_publishable_dVYlhRRufNzmbn6-20PE0g_2drhPNMk"
 };
 // ====================================
 
@@ -396,43 +403,126 @@ function rowToPlan(row){
 
 function getActive(){ return plans.find(p => p.id === activeId); }
 
-document.getElementById("googleLoginBtn").addEventListener("click", async () => {
-  if(!supabase) return;
-  await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.href } });
-});
 document.getElementById("logoutBtn").addEventListener("click", () => supabase.auth.signOut());
 document.getElementById("logoutFromGateBtn").addEventListener("click", () => supabase.auth.signOut());
 
+// ---------- email/password auth ----------
+let authMode = "signin"; // "signin" | "signup"
+const authEmail = document.getElementById("authEmail");
+const authPassword = document.getElementById("authPassword");
+const authSubmitBtn = document.getElementById("authSubmitBtn");
+const authToggleLink = document.getElementById("authToggleLink");
+const authToggleText = document.getElementById("authToggleText");
+const authIntro = document.getElementById("authIntro");
+
+function setAuthMode(mode){
+  authMode = mode;
+  if(mode === "signup"){
+    authSubmitBtn.textContent = "Opret konto";
+    authToggleText.textContent = "Har du allerede en konto?";
+    authToggleLink.textContent = "Log ind";
+    authIntro.textContent = "Opret en konto for at oprette eller tilslutte dig en stald.";
+    authPassword.setAttribute("autocomplete", "new-password");
+  } else {
+    authSubmitBtn.textContent = "Log ind";
+    authToggleText.textContent = "Ny bruger?";
+    authToggleLink.textContent = "Opret en konto";
+    authIntro.textContent = "Log ind for at se og redigere din stalds stævneplaner sammen med resten af holdet.";
+    authPassword.setAttribute("autocomplete", "current-password");
+  }
+  loginMsg.className = "msg"; loginMsg.textContent = "";
+}
+
+authToggleLink.addEventListener("click", e => {
+  e.preventDefault();
+  setAuthMode(authMode === "signin" ? "signup" : "signin");
+});
+
+authSubmitBtn.addEventListener("click", async () => {
+  if(!supabase) return;
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+  if(!email || !password){
+    loginMsg.className = "msg error"; loginMsg.textContent = "Udfyld både e-mail og adgangskode.";
+    return;
+  }
+  authSubmitBtn.disabled = true;
+  loginMsg.className = "msg"; loginMsg.textContent = "Vent lige…";
+
+  try{
+    if(authMode === "signup"){
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if(error) throw error;
+      if(data.session){
+        // Email confirmation is off — logged in right away, onAuthStateChange triggers boot()
+      } else {
+        loginMsg.className = "msg ok";
+        loginMsg.textContent = "Konto oprettet! Tjek din e-mail for at bekræfte kontoen, og log derefter ind.";
+        setAuthMode("signin");
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if(error) throw error;
+    }
+  } catch(err){
+    loginMsg.className = "msg error";
+    loginMsg.textContent = err.message || "Der gik noget galt.";
+  } finally {
+    authSubmitBtn.disabled = false;
+  }
+});
+
+// ---------- error screen ----------
+const errorGate = document.getElementById("errorGate");
+const errorDetails = document.getElementById("errorDetails");
+document.getElementById("retryBtn").addEventListener("click", () => boot());
+document.getElementById("logoutFromErrorBtn").addEventListener("click", async () => {
+  if(supabase) await supabase.auth.signOut();
+  showScreen("login");
+});
+function showError(err){
+  console.error(err);
+  errorDetails.textContent = (err && (err.message || JSON.stringify(err))) || String(err);
+  showScreen("error");
+}
+
 async function boot(){
   if(!configured) return;
-  const { data: { session: s } } = await supabase.auth.getSession();
-  session = s;
-  if(!session){ showScreen("login"); return; }
+  try{
+    const { data: { session: s } } = await supabase.auth.getSession();
+    session = s;
+    if(!session){ showScreen("login"); return; }
 
-  userEmail.textContent = session.user.email || "";
-  userAvatar.textContent = (session.user.email || "?").slice(0,1).toUpperCase();
+    userEmail.textContent = session.user.email || "";
+    userAvatar.textContent = (session.user.email || "?").slice(0,1).toUpperCase();
 
-  await supabase.from("profiles").upsert({
-    id: session.user.id,
-    email: session.user.email,
-    display_name: session.user.user_metadata?.full_name || session.user.email
-  }, { onConflict: "id" });
+    const { error: upsertErr } = await supabase.from("profiles").upsert({
+      id: session.user.id,
+      email: session.user.email,
+      display_name: session.user.user_metadata?.full_name || session.user.email
+    }, { onConflict: "id" });
+    if(upsertErr) throw upsertErr;
 
-  const { data: prof } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
-  profile = prof;
+    const { data: prof, error: profErr } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+    if(profErr) throw profErr;
+    profile = prof;
 
-  if(!profile || !profile.stable_id){ showScreen("stable"); return; }
+    if(!profile || !profile.stable_id){ showScreen("stable"); return; }
 
-  const { data: st } = await supabase.from("stables").select("*").eq("id", profile.stable_id).single();
-  stable = st;
+    const { data: st, error: stErr } = await supabase.from("stables").select("*").eq("id", profile.stable_id).single();
+    if(stErr) throw stErr;
+    stable = st;
 
-  stableNameLabel.textContent = stable.name;
-  stableNameInline.textContent = stable.name;
-  inviteCodeLabel.textContent = stable.invite_code;
+    stableNameLabel.textContent = stable.name;
+    stableNameInline.textContent = stable.name;
+    inviteCodeLabel.textContent = stable.invite_code;
 
-  await loadPlans();
-  subscribeRealtime();
-  showScreen("app");
+    await loadPlans();
+    subscribeRealtime();
+    showScreen("app");
+  } catch(err){
+    showError(err);
+  }
 }
 
 if(supabase){
@@ -441,6 +531,7 @@ if(supabase){
 
 function showScreen(name){
   loginGate.classList.toggle("hidden", name !== "login");
+  errorGate.classList.toggle("hidden", name !== "error");
   stableGate.classList.toggle("hidden", name !== "stable");
   appRoot.classList.toggle("hidden", name !== "app");
 }
